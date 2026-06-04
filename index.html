@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>VE Schools Dashboard | Auto-loads from GitHub Repo</title>
+    <title>VE Schools Dashboard | GitHub Pages Auto-Load</title>
     <style>
         * {
             margin: 0;
@@ -265,7 +265,16 @@
 
         .error-box {
             background: #f8d7da;
-            border-left: 4px solid #721c24;
+            border-left: 4px solid #dc3545;
+            padding: 1.5rem;
+            margin: 1rem;
+            border-radius: 8px;
+            text-align: left;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
             padding: 1rem;
             margin: 1rem;
             border-radius: 8px;
@@ -277,6 +286,14 @@
             font-size: 0.75rem;
             color: #6f8faa;
             border-top: 1px solid #e2edf7;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
         }
 
         @media (max-width: 700px) {
@@ -295,7 +312,7 @@
     <div class="header">
         <h1>
             📋 Vocational Education (VE) Schools 
-            <span>GitHub Auto-Load</span>
+            <span>GitHub Pages Auto-Load</span>
         </h1>
         <div class="sub">🔗 Automatically loads <strong>VE.csv</strong> from this GitHub repository</div>
     </div>
@@ -325,7 +342,7 @@
                 <tr><th>SL</th><th>School Name</th><th>District</th><th>Board</th><th>Sector</th><th>Project</th><th>Action</th></tr>
             </thead>
             <tbody id="tableBody">
-                <tr><td colspan="7" class="loading">⏳ Loading VE.csv from repository...<br><br>📁 Make sure VE.csv is in the same GitHub repo folder</td></tr>
+                <tr><td colspan="7" class="loading">⏳ Loading VE.csv from repository...<br><br>📁 Looking for VE.csv in the current folder</td></tr>
             </tbody>
         </table>
     </div>
@@ -335,22 +352,15 @@
 <script>
     let currentData = [];
 
-    // Get the current GitHub Pages base URL
-    function getBaseURL() {
-        // If running on GitHub Pages, use relative path
-        // Otherwise use current directory
-        const path = window.location.pathname;
-        const basePath = path.substring(0, path.lastIndexOf('/') + 1);
-        return basePath || './';
-    }
-
     function parseCSV(csvText) {
-        const lines = csvText.split(/\r?\n/);
+        const lines = csvText.split(/\r?\n/).filter(line => line.trim());
         if (lines.length === 0) return [];
         
+        // Get headers (first line)
         let headers = lines[0].split(',').map(h => h.trim().replace(/^\uFEFF/, '').replace(/^"|"$/g, ''));
         
-        const slIdx = headers.findIndex(h => h.toLowerCase() === 'sl' || h.toLowerCase() === 'sno');
+        // Find column indices
+        const slIdx = headers.findIndex(h => h.toLowerCase() === 'sl' || h.toLowerCase() === 'sno' || h.toLowerCase() === 'serial');
         const schoolIdx = headers.findIndex(h => h.toLowerCase() === 'school name' || h.toLowerCase() === 'school');
         const districtIdx = headers.findIndex(h => h.toLowerCase() === 'district');
         const boardIdx = headers.findIndex(h => h.toLowerCase() === 'board');
@@ -477,44 +487,40 @@
         tbody.innerHTML = '<tr><td colspan="7" class="loading">⏳ Loading VE.csv from repository...<br><br>📁 Looking for VE.csv in the current folder</td></tr>';
         
         try {
-            // Try multiple possible paths
-            const pathsToTry = [
-                'VE.csv',
-                './VE.csv',
-                window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'VE.csv'
-            ];
+            // Get the current page URL and construct the CSV URL
+            const currentUrl = window.location.href;
+            const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/') + 1);
+            const csvUrl = baseUrl + 'VE.csv';
             
-            let response = null;
-            let successfulPath = '';
+            console.log('Attempting to load from:', csvUrl);
             
-            for (const path of pathsToTry) {
-                try {
-                    const url = path.startsWith('http') ? path : path;
-                    response = await fetch(url, { cache: 'no-store' });
-                    if (response.ok) {
-                        successfulPath = path;
-                        break;
-                    }
-                } catch (e) {
-                    continue;
+            const response = await fetch(csvUrl, { 
+                cache: 'no-store',
+                headers: {
+                    'Accept': 'text/csv,text/plain,*/*'
                 }
-            }
+            });
             
-            if (!response || !response.ok) {
-                throw new Error('VE.csv not found in repository');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
             const csvText = await response.text();
+            
+            if (!csvText.trim()) {
+                throw new Error('CSV file is empty');
+            }
+            
             const records = parseCSV(csvText);
             
             if (records.length === 0) {
-                throw new Error('No valid records found in VE.csv. Check format: SL,School Name,District,Board,Sector,Project,Link');
+                throw new Error('No valid records found. Check CSV format.');
             }
             
             currentData = records;
             updateFilters(currentData);
             filterData();
-            statusDiv.innerHTML = `<span>✅</span> Loaded ${currentData.length} records from ${successfulPath}`;
+            statusDiv.innerHTML = `<span>✅</span> Loaded ${currentData.length} records from VE.csv`;
             statusDiv.style.color = '#155724';
             document.getElementById('dataSource').innerHTML = `VE.csv (${currentData.length} schools)`;
             
@@ -525,15 +531,22 @@
             tbody.innerHTML = `<tr><td colspan="7" class="no-data">
                 <div class="error-box">
                     <strong>❌ Could not load VE.csv from GitHub repository</strong><br><br>
+                    <strong>Debug Information:</strong><br>
+                    Current URL: <code>${window.location.href}</code><br>
+                    CSV URL attempted: <code>${window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1)}VE.csv</code><br><br>
+                    
                     <strong>Solutions:</strong><br>
-                    1. Make sure <strong>VE.csv</strong> is in the <strong>SAME GitHub repo folder</strong> as this HTML file<br>
-                    2. Check the file name is exactly <strong>VE.csv</strong> (case-sensitive)<br>
-                    3. Verify the CSV format has headers: <strong>SL,School Name,District,Board,Sector,Project,Link</strong><br>
-                    4. Wait a few minutes after pushing to GitHub (cache)<br>
-                    5. Try hard refresh: <strong>Ctrl+Shift+R</strong> or <strong>Cmd+Shift+R</strong><br><br>
-                    <strong>Sample CSV content:</strong><br>
-                    <code>SL,School Name,District,Board,Sector,Project,Link<br>
-                    1,B.B. Institution,North,CBSE,Information Technology,VE 24 Schools,https://docs.google.com/spreadsheets/d/xxx/edit</code>
+                    1. <strong>Wait 1-2 minutes</strong> after pushing to GitHub (GitHub Pages has a delay)<br>
+                    2. <strong>Hard refresh</strong> your browser: <code>Ctrl+Shift+R</code> (Windows) or <code>Cmd+Shift+R</code> (Mac)<br>
+                    3. <strong>Check the raw CSV URL</strong>: <a href="${window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1)}VE.csv" target="_blank">Click here to test if VE.csv is accessible</a><br>
+                    4. <strong>Verify file name</strong> is exactly <code>VE.csv</code> (case-sensitive)<br>
+                    5. <strong>Check CSV format</strong> has these exact headers:<br>
+                    <code>SL,School Name,District,Board,Sector,Project,Link</code><br><br>
+                    
+                    <strong>Sample first row:</strong><br>
+                    <code>1,B.B. Institution,North,CBSE,Information Technology,VE 24 Schools,https://docs.google.com/spreadsheets/d/xxx/edit</code><br><br>
+                    
+                    <strong>After fixing, click the Refresh Data button above.</strong>
                 </div>
             </td></tr>`;
         }
