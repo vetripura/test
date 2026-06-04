@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VE Schools Dashboard - Auto Loads VE.csv</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>VE Schools Dashboard | Auto-loads from GitHub Repo</title>
     <style>
         * {
             margin: 0;
@@ -82,10 +82,12 @@
             border-radius: 40px;
             cursor: pointer;
             font-size: 0.85rem;
+            transition: 0.2s;
         }
 
         .refresh-btn:hover {
             background: #0e4e6b;
+            transform: translateY(-1px);
         }
 
         .controls {
@@ -111,6 +113,8 @@
             border: 1px solid #cbdde9;
             border-radius: 60px;
             font-size: 1rem;
+            background: #fefefe;
+            transition: 0.2s;
             outline: none;
         }
 
@@ -126,6 +130,7 @@
             top: 50%;
             transform: translateY(-50%);
             font-size: 1.1rem;
+            opacity: 0.7;
         }
 
         .filter-group {
@@ -143,6 +148,7 @@
             background: white;
             font-size: 0.9rem;
             cursor: pointer;
+            outline: none;
             appearance: none;
             padding-right: 2.2rem;
             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23333" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>');
@@ -157,6 +163,11 @@
             border-radius: 40px;
             font-weight: 500;
             cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .reset-btn:hover {
+            background: #dce5ef;
         }
 
         .stats {
@@ -166,6 +177,9 @@
             border-bottom: 1px solid #e9edf2;
             color: #2c5a7a;
             font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
         }
 
         .table-wrapper {
@@ -197,6 +211,7 @@
         td {
             padding: 0.9rem 1rem;
             border-bottom: 1px solid #e9edf2;
+            vertical-align: middle;
         }
 
         tr:hover td {
@@ -248,6 +263,14 @@
             color: #1b6b8f;
         }
 
+        .error-box {
+            background: #f8d7da;
+            border-left: 4px solid #721c24;
+            padding: 1rem;
+            margin: 1rem;
+            border-radius: 8px;
+        }
+
         footer {
             padding: 1rem 2rem;
             text-align: center;
@@ -272,14 +295,14 @@
     <div class="header">
         <h1>
             📋 Vocational Education (VE) Schools 
-            <span>Auto-loads VE.csv</span>
+            <span>GitHub Auto-Load</span>
         </h1>
-        <div class="sub">🔗 Automatically reads <strong>VE.csv</strong> from the same folder</div>
+        <div class="sub">🔗 Automatically loads <strong>VE.csv</strong> from this GitHub repository</div>
     </div>
 
     <div class="status-bar">
         <div class="status-message" id="statusMessage">
-            <span>🔄</span> Loading VE.csv...
+            <span>🔄</span> Loading VE.csv from GitHub...
         </div>
         <button class="refresh-btn" onclick="loadCSV()">⟳ Refresh Data</button>
     </div>
@@ -302,15 +325,24 @@
                 <tr><th>SL</th><th>School Name</th><th>District</th><th>Board</th><th>Sector</th><th>Project</th><th>Action</th></tr>
             </thead>
             <tbody id="tableBody">
-                <tr><td colspan="7" class="loading">⏳ Loading VE.csv from folder...<br><br>📁 Make sure VE.csv is in the same folder as this HTML file</td></tr>
+                <tr><td colspan="7" class="loading">⏳ Loading VE.csv from repository...<br><br>📁 Make sure VE.csv is in the same GitHub repo folder</td></tr>
             </tbody>
         </table>
     </div>
-    <footer>📎 Total records: <span id="totalCount">0</span> — File: <strong>VE.csv</strong> in same folder</footer>
+    <footer>📎 Total records: <span id="totalCount">0</span> — Data source: <strong id="dataSource">VE.csv</strong> from this repo</footer>
 </div>
 
 <script>
     let currentData = [];
+
+    // Get the current GitHub Pages base URL
+    function getBaseURL() {
+        // If running on GitHub Pages, use relative path
+        // Otherwise use current directory
+        const path = window.location.pathname;
+        const basePath = path.substring(0, path.lastIndexOf('/') + 1);
+        return basePath || './';
+    }
 
     function parseCSV(csvText) {
         const lines = csvText.split(/\r?\n/);
@@ -404,7 +436,7 @@
         });
         tbody.innerHTML = html;
         document.getElementById('totalCount').innerText = data.length;
-        document.getElementById('statsMsg').innerHTML = `📌 Showing <strong>${data.length}</strong> of ${currentData.length} schools`;
+        document.getElementById('statsMsg').innerHTML = `📌 Showing <strong>${data.length}</strong> of ${currentData.length} schools — Click any link to access student database.`;
     }
 
     function escapeHtml(str) { 
@@ -440,40 +472,69 @@
         const statusDiv = document.getElementById('statusMessage');
         const tbody = document.getElementById('tableBody');
         
-        statusDiv.innerHTML = '<span>🔄</span> Loading VE.csv...';
-        tbody.innerHTML = '</table><td colspan="7" class="loading">⏳ Loading VE.csv from folder...</td></tr>';
+        statusDiv.innerHTML = '<span>🔄</span> Loading VE.csv from GitHub...';
+        statusDiv.style.color = '#1b6b8f';
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">⏳ Loading VE.csv from repository...<br><br>📁 Looking for VE.csv in the current folder</td></tr>';
         
         try {
-            const response = await fetch('VE.csv');
-            if (!response.ok) {
-                throw new Error(`VE.csv not found (HTTP ${response.status})`);
+            // Try multiple possible paths
+            const pathsToTry = [
+                'VE.csv',
+                './VE.csv',
+                window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1) + 'VE.csv'
+            ];
+            
+            let response = null;
+            let successfulPath = '';
+            
+            for (const path of pathsToTry) {
+                try {
+                    const url = path.startsWith('http') ? path : path;
+                    response = await fetch(url, { cache: 'no-store' });
+                    if (response.ok) {
+                        successfulPath = path;
+                        break;
+                    }
+                } catch (e) {
+                    continue;
+                }
             }
+            
+            if (!response || !response.ok) {
+                throw new Error('VE.csv not found in repository');
+            }
+            
             const csvText = await response.text();
             const records = parseCSV(csvText);
             
             if (records.length === 0) {
-                throw new Error('No valid records found in VE.csv');
+                throw new Error('No valid records found in VE.csv. Check format: SL,School Name,District,Board,Sector,Project,Link');
             }
             
             currentData = records;
             updateFilters(currentData);
             filterData();
-            statusDiv.innerHTML = `<span>✅</span> Loaded ${currentData.length} records from VE.csv`;
+            statusDiv.innerHTML = `<span>✅</span> Loaded ${currentData.length} records from ${successfulPath}`;
             statusDiv.style.color = '#155724';
+            document.getElementById('dataSource').innerHTML = `VE.csv (${currentData.length} schools)`;
             
         } catch (error) {
             console.error('Error loading CSV:', error);
-            statusDiv.innerHTML = `<span>❌</span> Error: ${error.message}. Make sure VE.csv is in the same folder!`;
+            statusDiv.innerHTML = `<span>❌</span> Error: ${error.message}`;
             statusDiv.style.color = '#721c24';
             tbody.innerHTML = `<tr><td colspan="7" class="no-data">
-                ❌ Could not load VE.csv<br><br>
-                <strong>Solution:</strong><br>
-                1. Make sure <strong>VE.csv</strong> is in the <strong>SAME FOLDER</strong> as this HTML file<br>
-                2. Or run a local server: <code>python -m http.server 8000</code><br>
-                3. Then open <code>http://localhost:8000/server.html</code>
-                <br><br>
-                📋 CSV Format Required:<br>
-                <code>SL,School Name,District,Board,Sector,Project,Link</code>
+                <div class="error-box">
+                    <strong>❌ Could not load VE.csv from GitHub repository</strong><br><br>
+                    <strong>Solutions:</strong><br>
+                    1. Make sure <strong>VE.csv</strong> is in the <strong>SAME GitHub repo folder</strong> as this HTML file<br>
+                    2. Check the file name is exactly <strong>VE.csv</strong> (case-sensitive)<br>
+                    3. Verify the CSV format has headers: <strong>SL,School Name,District,Board,Sector,Project,Link</strong><br>
+                    4. Wait a few minutes after pushing to GitHub (cache)<br>
+                    5. Try hard refresh: <strong>Ctrl+Shift+R</strong> or <strong>Cmd+Shift+R</strong><br><br>
+                    <strong>Sample CSV content:</strong><br>
+                    <code>SL,School Name,District,Board,Sector,Project,Link<br>
+                    1,B.B. Institution,North,CBSE,Information Technology,VE 24 Schools,https://docs.google.com/spreadsheets/d/xxx/edit</code>
+                </div>
             </td></tr>`;
         }
     }
