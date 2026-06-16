@@ -1,63 +1,101 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>UDISE Student Search</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
 body{
-    font-family:Arial,sans-serif;
+    font-family: Arial, sans-serif;
     margin:20px;
+    background:#f5f5f5;
+}
+
+.container{
+    max-width:1400px;
+    margin:auto;
+}
+
+h1{
+    text-align:center;
+    color:#333;
 }
 
 .search-box{
-    margin-bottom:20px;
+    text-align:center;
+    margin:20px 0;
 }
 
 input{
     padding:10px;
-    width:250px;
+    width:300px;
+    font-size:16px;
 }
 
 button{
-    padding:10px 15px;
+    padding:10px 20px;
+    font-size:16px;
     cursor:pointer;
+    background:#007bff;
+    color:#fff;
+    border:none;
+    border-radius:4px;
+}
+
+button:hover{
+    background:#0056b3;
+}
+
+.card{
+    background:#fff;
+    padding:15px;
+    border-radius:8px;
+    margin-bottom:20px;
+    box-shadow:0 2px 5px rgba(0,0,0,0.1);
 }
 
 table{
-    border-collapse:collapse;
     width:100%;
-    margin-top:15px;
+    border-collapse:collapse;
+    background:#fff;
     font-size:14px;
 }
 
-th,td{
-    border:1px solid #ccc;
+th, td{
+    border:1px solid #ddd;
     padding:8px;
     text-align:left;
 }
 
 th{
-    background:#f0f0f0;
+    background:#007bff;
+    color:white;
+    position:sticky;
+    top:0;
 }
 
-.summary{
-    margin-top:20px;
-    padding:15px;
-    background:#f8f8f8;
-    border:1px solid #ddd;
+.summary-table{
+    width:400px;
 }
 
-h2,h3{
-    margin-top:25px;
+.no-data{
+    color:red;
+    font-weight:bold;
+}
+
+.table-container{
+    overflow-x:auto;
 }
 </style>
 </head>
 <body>
 
-<h2>Search Students by UDISE Code</h2>
+<div class="container">
+
+<h1>UDISE Student Search</h1>
 
 <div class="search-box">
     <input type="text" id="udise" placeholder="Enter UDISE Code">
@@ -66,149 +104,175 @@ h2,h3{
 
 <div id="output"></div>
 
+</div>
+
 <script>
 
-let excelData=[];
+let excelData = [];
 
-fetch("data.xlsx")
-.then(res=>res.arrayBuffer())
-.then(data=>{
+fetch('data.xlsx')
+.then(response => response.arrayBuffer())
+.then(data => {
 
-    const workbook=XLSX.read(data,{type:'array'});
-    const sheet=workbook.Sheets[workbook.SheetNames[0]];
+    const workbook = XLSX.read(data, {type:'array'});
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
 
-    excelData=XLSX.utils.sheet_to_json(sheet,{
+    excelData = XLSX.utils.sheet_to_json(sheet, {
         header:1,
         defval:""
     });
 
+})
+.catch(error => {
+    document.getElementById("output").innerHTML =
+        "<p class='no-data'>Unable to load data.xlsx</p>";
 });
 
 function searchUDISE(){
 
-    const udise=document.getElementById("udise").value.trim();
+    const udise = document.getElementById("udise").value.trim();
 
     if(!udise){
-        alert("Enter UDISE Code");
+        alert("Please enter UDISE Code");
         return;
     }
 
-    let students=[];
+    const students = [];
 
-    for(let i=1;i<excelData.length;i++){
+    // UDISE Code in Column A (Index 0)
+    for(let i = 1; i < excelData.length; i++){
 
-        if(String(excelData[i][3]).trim()===udise){
+        if(String(excelData[i][0]).trim() === udise){
 
             students.push(excelData[i]);
 
         }
     }
 
-    if(students.length===0){
+    if(students.length === 0){
 
-        document.getElementById("output").innerHTML=
-        "<h3 style='color:red'>No records found.</h3>";
+        document.getElementById("output").innerHTML =
+            "<p class='no-data'>No records found for this UDISE Code.</p>";
 
         return;
     }
 
-    let classSummary={};
+    const first = students[0];
 
-    students.forEach(row=>{
+    // Class-wise Summary
+    const classSummary = {};
 
-        let cls=row[6];
+    students.forEach(row => {
 
-        if(!classSummary[cls]){
-            classSummary[cls]=0;
-        }
+        const cls = row[5] || "Blank";
 
-        classSummary[cls]++;
+        classSummary[cls] = (classSummary[cls] || 0) + 1;
 
     });
 
-    let summaryHTML=`
-    <div class="summary">
-        <h3>Enrolment Summary</h3>
-        <p><strong>Total Students:</strong> ${students.length}</p>
+    let summaryRows = "";
 
-        <table>
+    Object.keys(classSummary)
+        .sort()
+        .forEach(cls => {
+
+            summaryRows += `
+            <tr>
+                <td>${cls}</td>
+                <td>${classSummary[cls]}</td>
+            </tr>`;
+
+        });
+
+    let html = `
+
+    <div class="card">
+        <h2>School Information</h2>
+
+        <p><strong>UDISE Code:</strong> ${udise}</p>
+        <p><strong>District:</strong> ${first[1]}</p>
+        <p><strong>Name of the School:</strong> ${first[2]}</p>
+        <p><strong>School Board:</strong> ${first[3]}</p>
+        <p><strong>Total Number of Enrolment:</strong> ${students.length}</p>
+    </div>
+
+    <div class="card">
+        <h2>Class Wise Enrolment Summary</h2>
+
+        <table class="summary-table">
             <tr>
                 <th>Class</th>
                 <th>Total Enrolment</th>
             </tr>
+
+            ${summaryRows}
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Student Details</h2>
+
+        <div class="table-container">
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>District</th>
+                    <th>Name of the School</th>
+                    <th>School Board</th>
+                    <th>Name of Candidate</th>
+                    <th>Class</th>
+                    <th>Gender</th>
+                    <th>Date of Birth</th>
+                    <th>AADHAAR number</th>
+                    <th>Father Name</th>
+                    <th>Mother Name</th>
+                    <th>Category</th>
+                    <th>Sector</th>
+                    <th>Job Role</th>
+                    <th>Project Name (Select From Drop Down Only)</th>
+                    <th>Data Verfied By (VT Name)</th>
+                </tr>
+            </thead>
+
+            <tbody>
     `;
 
-    Object.keys(classSummary)
-    .sort()
-    .forEach(cls=>{
+    students.forEach(row => {
 
-        summaryHTML+=`
+        html += `
         <tr>
-            <td>${cls}</td>
-            <td>${classSummary[cls]}</td>
-        </tr>
-        `;
+            <td>${row[1] || ""}</td>
+            <td>${row[2] || ""}</td>
+            <td>${row[3] || ""}</td>
+            <td>${row[4] || ""}</td>
+            <td>${row[5] || ""}</td>
+            <td>${row[6] || ""}</td>
+            <td>${row[7] || ""}</td>
+            <td>${row[8] || ""}</td>
+            <td>${row[9] || ""}</td>
+            <td>${row[10] || ""}</td>
+            <td>${row[11] || ""}</td>
+            <td>${row[12] || ""}</td>
+            <td>${row[13] || ""}</td>
+            <td>${row[14] || ""}</td>
+            <td>${row[15] || ""}</td>
+        </tr>`;
     });
 
-    summaryHTML+=`</table></div>`;
+    html += `
+            </tbody>
+        </table>
 
-    let tableHTML=`
-    <h3>Student Details</h3>
-
-    <table>
-        <thead>
-            <tr>
-                <th>District</th>
-                <th>Name of the School</th>
-                <th>School Board</th>
-                <th>Name of Candidate</th>
-                <th>Class</th>
-                <th>Gender</th>
-                <th>Date of Birth</th>
-                <th>AADHAAR number</th>
-                <th>Father Name</th>
-                <th>Mother Name</th>
-                <th>Category</th>
-                <th>Sector</th>
-                <th>Job Role</th>
-                <th>Project Name</th>
-                <th>Data Verfied By (VT Name)</th>
-            </tr>
-        </thead>
-        <tbody>
+        </div>
+    </div>
     `;
 
-    students.forEach(r=>{
-
-        tableHTML+=`
-        <tr>
-            <td>${r[1]}</td>
-            <td>${r[2]}</td>
-            <td>${r[4]}</td>
-            <td>${r[5]}</td>
-            <td>${r[6]}</td>
-            <td>${r[7]}</td>
-            <td>${r[8]}</td>
-            <td>${r[9]}</td>
-            <td>${r[10]}</td>
-            <td>${r[11]}</td>
-            <td>${r[12]}</td>
-            <td>${r[13]}</td>
-            <td>${r[14]}</td>
-            <td>${r[15]}</td>
-            <td>${r[16]}</td>
-        </tr>
-        `;
-    });
-
-    tableHTML+=`
-        </tbody>
-    </table>
-    `;
-
-    document.getElementById("output").innerHTML=
-        summaryHTML + tableHTML;
+    document.getElementById("output").innerHTML = html;
 }
+
 </script>
 
 </body>
