@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .login-box {
+            background: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            width: 320px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-box">
+    <h2>Employee Login</h2>
+
+    <input type="text" id="employeeId" placeholder="User name">
+    <input type="password" id="password" placeholder="Password">
+
+    <button onclick="login()">Login</button>
+
+    <div class="error" id="errorMsg"></div>
+</div>
+
+<script>
+function login() {
+    const employeeId = document.getElementById("employeeId").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const errorMsg = document.getElementById("errorMsg");
+
+    // Wrong User Name or Password
+    if (!employeeId.startsWith("TR000")) {
+        errorMsg.textContent = "Wrong User Name or Password";
+        return;
+    }
+
+    // Get last 3 characters of Employee ID
+    const lastThreeDigits = employeeId.slice(-3);
+
+    // Expected password
+    const expectedPassword = "SLCPL@" + lastThreeDigits;
+
+    if (password === expectedPassword) {
+        window.location.href = "data.html";
+    } else {
+        errorMsg.textContent = "Invalid Employee ID or Password";
+    }
+}
+</script>
+
+</body>
+</html>
