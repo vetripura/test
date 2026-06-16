@@ -1,3 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UDISE Student Search</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    margin:20px;
+    background:#f5f5f5;
+}
+
+.container{
+    max-width:1400px;
+    margin:auto;
+}
+
+h1{
+    text-align:center;
+    color:#333;
+}
+
+.search-box{
+    text-align:center;
+    margin:20px 0;
+}
+
+input{
+    padding:10px;
+    width:300px;
+    font-size:16px;
+}
+
+button{
+    padding:10px 20px;
+    font-size:16px;
+    cursor:pointer;
+    background:#007bff;
+    color:#fff;
+    border:none;
+    border-radius:4px;
+}
+
+button:hover{
+    background:#0056b3;
+}
+
+.card{
+    background:#fff;
+    padding:15px;
+    border-radius:8px;
+    margin-bottom:20px;
+    box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    background:#fff;
+    font-size:14px;
+}
+
+th, td{
+    border:1px solid #ddd;
+    padding:8px;
+    text-align:left;
+}
+
+th{
+    background:#007bff;
+    color:white;
+    position:sticky;
+    top:0;
+}
+
+.summary-table{
+    width:400px;
+}
+
+.no-data{
+    color:red;
+    font-weight:bold;
+}
+
+.table-container{
+    overflow-x:auto;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h1>UDISE Student Search</h1>
+
+<div class="search-box">
+    <input type="text" id="udise" placeholder="Enter UDISE Code">
+    <button onclick="searchUDISE()">Search</button>
+</div>
+
+<div id="output"></div>
+
+</div>
+
 <script>
 
 let excelData = [];
@@ -6,93 +114,43 @@ fetch('data.xlsx')
 .then(response => response.arrayBuffer())
 .then(data => {
 
-    const workbook = XLSX.read(data, {
-        type: 'array',
-        cellDates: true
-    });
-
+    const workbook = XLSX.read(data, {type:'array'});
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
 
     excelData = XLSX.utils.sheet_to_json(sheet, {
-        header: 1,
-        defval: "",
-        raw: true
+        header:1,
+        defval:""
     });
 
 })
 .catch(error => {
-
     document.getElementById("output").innerHTML =
         "<p class='no-data'>Unable to load data.xlsx</p>";
-
 });
 
-
-function formatDOB(value) {
-
-    if (!value) return "";
-
-    const months = [
-        "Jan","Feb","Mar","Apr","May","Jun",
-        "Jul","Aug","Sep","Oct","Nov","Dec"
-    ];
-
-    // Excel Date Object
-    if (value instanceof Date) {
-
-        return String(value.getDate()).padStart(2, "0") + "-" +
-               months[value.getMonth()] + "-" +
-               value.getFullYear();
-    }
-
-    // Excel Serial Number
-    if (typeof value === "number") {
-
-        const d = XLSX.SSF.parse_date_code(value);
-
-        if (d) {
-            return String(d.d).padStart(2, "0") + "-" +
-                   months[d.m - 1] + "-" +
-                   d.y;
-        }
-    }
-
-    // String Date
-    const dt = new Date(value);
-
-    if (!isNaN(dt)) {
-
-        return String(dt.getDate()).padStart(2, "0") + "-" +
-               months[dt.getMonth()] + "-" +
-               dt.getFullYear();
-    }
-
-    return value;
-}
-
-
-function searchUDISE() {
+function searchUDISE(){
 
     const udise = document.getElementById("udise").value.trim();
 
-    if (!udise) {
+    if(!udise){
         alert("Please enter UDISE Code");
         return;
     }
 
     const students = [];
 
-    // Column A = UDISE
-    for (let i = 1; i < excelData.length; i++) {
+    // UDISE Code in Column A (Index 0)
+    for(let i = 1; i < excelData.length; i++){
 
-        if (String(excelData[i][0]).trim() === udise) {
+        if(String(excelData[i][0]).trim() === udise){
 
             students.push(excelData[i]);
+
         }
     }
 
-    if (students.length === 0) {
+    if(students.length === 0){
 
         document.getElementById("output").innerHTML =
             "<p class='no-data'>No records found for this UDISE Code.</p>";
@@ -102,6 +160,7 @@ function searchUDISE() {
 
     const first = students[0];
 
+    // Class-wise Summary
     const classSummary = {};
 
     students.forEach(row => {
@@ -109,6 +168,7 @@ function searchUDISE() {
         const cls = row[5] || "Blank";
 
         classSummary[cls] = (classSummary[cls] || 0) + 1;
+
     });
 
     let summaryRows = "";
@@ -122,6 +182,7 @@ function searchUDISE() {
                 <td>${cls}</td>
                 <td>${classSummary[cls]}</td>
             </tr>`;
+
         });
 
     let html = `
@@ -130,9 +191,9 @@ function searchUDISE() {
         <h2>School Information</h2>
 
         <p><strong>UDISE Code:</strong> ${udise}</p>
-        <p><strong>District:</strong> ${first[1] || ""}</p>
-        <p><strong>Name of the School:</strong> ${first[2] || ""}</p>
-        <p><strong>School Board:</strong> ${first[3] || ""}</p>
+        <p><strong>District:</strong> ${first[1]}</p>
+        <p><strong>Name of the School:</strong> ${first[2]}</p>
+        <p><strong>School Board:</strong> ${first[3]}</p>
         <p><strong>Total Number of Enrolment:</strong> ${students.length}</p>
     </div>
 
@@ -189,7 +250,7 @@ function searchUDISE() {
             <td>${row[4] || ""}</td>
             <td>${row[5] || ""}</td>
             <td>${row[6] || ""}</td>
-            <td>${formatDOB(row[7])}</td>
+            <td>${row[7] || ""}</td>
             <td>${row[8] || ""}</td>
             <td>${row[9] || ""}</td>
             <td>${row[10] || ""}</td>
@@ -213,3 +274,6 @@ function searchUDISE() {
 }
 
 </script>
+
+</body>
+</html>
