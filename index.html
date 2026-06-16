@@ -1,141 +1,214 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <title>UDISE Student Search</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
 body{
-    font-family: Arial, sans-serif;
+    font-family:Arial,sans-serif;
     margin:20px;
 }
+
+.search-box{
+    margin-bottom:20px;
+}
+
 input{
     padding:10px;
     width:250px;
 }
+
 button{
     padding:10px 15px;
     cursor:pointer;
 }
+
 table{
     border-collapse:collapse;
     width:100%;
-    margin-top:20px;
+    margin-top:15px;
+    font-size:14px;
 }
+
 th,td{
     border:1px solid #ccc;
-    padding:10px;
+    padding:8px;
     text-align:left;
 }
+
 th{
-    background:#f5f5f5;
-    width:35%;
+    background:#f0f0f0;
+}
+
+.summary{
+    margin-top:20px;
+    padding:15px;
+    background:#f8f8f8;
+    border:1px solid #ddd;
+}
+
+h2,h3{
+    margin-top:25px;
 }
 </style>
 </head>
 <body>
 
-<h2>Student Search by UDISE Code</h2>
+<h2>Search Students by UDISE Code</h2>
 
-<input type="text" id="udise" placeholder="Enter UDISE Code">
-<button onclick="searchStudent()">Search</button>
+<div class="search-box">
+    <input type="text" id="udise" placeholder="Enter UDISE Code">
+    <button onclick="searchUDISE()">Search</button>
+</div>
 
-<div id="result"></div>
+<div id="output"></div>
 
 <script>
 
-let sheetData = [];
+let excelData=[];
 
-// Load Excel file
 fetch("data.xlsx")
-.then(response => response.arrayBuffer())
-.then(data => {
+.then(res=>res.arrayBuffer())
+.then(data=>{
 
-    const workbook = XLSX.read(data, {type:"array"});
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const workbook=XLSX.read(data,{type:'array'});
+    const sheet=workbook.Sheets[workbook.SheetNames[0]];
 
-    sheetData = XLSX.utils.sheet_to_json(sheet, {
+    excelData=XLSX.utils.sheet_to_json(sheet,{
         header:1,
         defval:""
     });
 
 });
 
-function searchStudent(){
+function searchUDISE(){
 
-    const udise = document.getElementById("udise").value.trim();
+    const udise=document.getElementById("udise").value.trim();
 
     if(!udise){
-        alert("Please enter UDISE Code");
+        alert("Enter UDISE Code");
         return;
     }
 
-    let rowFound = null;
+    let students=[];
 
-    // Search Column D (index 3)
-    for(let i=1;i<sheetData.length;i++){
+    for(let i=1;i<excelData.length;i++){
 
-        if(String(sheetData[i][3]).trim() === udise){
+        if(String(excelData[i][3]).trim()===udise){
 
-            rowFound = sheetData[i];
-            break;
+            students.push(excelData[i]);
+
         }
     }
 
-    if(!rowFound){
+    if(students.length===0){
 
-        document.getElementById("result").innerHTML =
-        "<p style='color:red'>No record found for this UDISE Code.</p>";
+        document.getElementById("output").innerHTML=
+        "<h3 style='color:red'>No records found.</h3>";
 
         return;
     }
 
-    document.getElementById("result").innerHTML = `
+    let classSummary={};
+
+    students.forEach(row=>{
+
+        let cls=row[6];
+
+        if(!classSummary[cls]){
+            classSummary[cls]=0;
+        }
+
+        classSummary[cls]++;
+
+    });
+
+    let summaryHTML=`
+    <div class="summary">
+        <h3>Enrolment Summary</h3>
+        <p><strong>Total Students:</strong> ${students.length}</p>
+
+        <table>
+            <tr>
+                <th>Class</th>
+                <th>Total Enrolment</th>
+            </tr>
+    `;
+
+    Object.keys(classSummary)
+    .sort()
+    .forEach(cls=>{
+
+        summaryHTML+=`
+        <tr>
+            <td>${cls}</td>
+            <td>${classSummary[cls]}</td>
+        </tr>
+        `;
+    });
+
+    summaryHTML+=`</table></div>`;
+
+    let tableHTML=`
+    <h3>Student Details</h3>
+
     <table>
-        <tr>
-            <th>Name of Candidate</th>
-            <td>${rowFound[8]}</td>
-        </tr>
+        <thead>
+            <tr>
+                <th>District</th>
+                <th>Name of the School</th>
+                <th>School Board</th>
+                <th>Name of Candidate</th>
+                <th>Class</th>
+                <th>Gender</th>
+                <th>Date of Birth</th>
+                <th>AADHAAR number</th>
+                <th>Father Name</th>
+                <th>Mother Name</th>
+                <th>Category</th>
+                <th>Sector</th>
+                <th>Job Role</th>
+                <th>Project Name</th>
+                <th>Data Verfied By (VT Name)</th>
+            </tr>
+        </thead>
+        <tbody>
+    `;
 
-        <tr>
-            <th>Class</th>
-            <td>${rowFound[9]}</td>
-        </tr>
+    students.forEach(r=>{
 
+        tableHTML+=`
         <tr>
-            <th>Gender (Select From Drop Down Only)</th>
-            <td>${rowFound[10]}</td>
+            <td>${r[1]}</td>
+            <td>${r[2]}</td>
+            <td>${r[4]}</td>
+            <td>${r[5]}</td>
+            <td>${r[6]}</td>
+            <td>${r[7]}</td>
+            <td>${r[8]}</td>
+            <td>${r[9]}</td>
+            <td>${r[10]}</td>
+            <td>${r[11]}</td>
+            <td>${r[12]}</td>
+            <td>${r[13]}</td>
+            <td>${r[14]}</td>
+            <td>${r[15]}</td>
+            <td>${r[16]}</td>
         </tr>
+        `;
+    });
 
-        <tr>
-            <th>Date of Birth (Example: 24-Jul-2025)</th>
-            <td>${rowFound[11]}</td>
-        </tr>
+    tableHTML+=`
+        </tbody>
+    </table>
+    `;
 
-        <tr>
-            <th>AADHAAR number (12 Digit Number)</th>
-            <td>${rowFound[12]}</td>
-        </tr>
-
-        <tr>
-            <th>Father Name</th>
-            <td>${rowFound[13]}</td>
-        </tr>
-
-        <tr>
-            <th>Mother Name</th>
-            <td>${rowFound[14]}</td>
-        </tr>
-
-        <tr>
-            <th>Category</th>
-            <td>${rowFound[15]}</td>
-        </tr>
-    </table>`;
+    document.getElementById("output").innerHTML=
+        summaryHTML + tableHTML;
 }
-
 </script>
 
 </body>
