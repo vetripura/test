@@ -191,7 +191,7 @@
             color: #1e293b;
         }
 
-        /* PDF export styles – A4 landscape friendly */
+        /* PDF export styles – A4 landscape, all text visible */
         .pdf-wrapper {
             padding: 12px 16px;
             background: white;
@@ -248,20 +248,22 @@
             border-collapse: collapse;
             font-size: 8.5px;
             margin-top: 6px;
+            table-layout: auto; /* ensures content expands cells */
         }
         .pdf-wrapper .pdf-student-table th {
             background: #e9edf2;
             color: #0f172a;
             font-weight: 600;
-            padding: 5px 4px;
+            padding: 5px 6px;
             border: 1px solid #bcc3cd;
             text-align: left;
             white-space: nowrap;
         }
         .pdf-wrapper .pdf-student-table td {
-            padding: 4px 4px;
+            padding: 4px 6px;
             border: 1px solid #bcc3cd;
             vertical-align: middle;
+            word-break: break-word;  /* prevents overflow */
         }
         .pdf-wrapper .pdf-student-table tr:nth-child(even) td { background: #f8fafc; }
         .pdf-wrapper .pdf-student-table thead { display: table-header-group; }
@@ -312,7 +314,6 @@
                 const sheet = workbook.Sheets[sheetName];
                 excelData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
                 excelData = excelData.filter(row => row.some(cell => cell && cell.toString().trim() !== ''));
-                // auto-search with default UDISE
                 const defaultU = document.getElementById('udise').value.trim();
                 if (defaultU) searchUDISE();
             })
@@ -464,7 +465,7 @@
             return String(dateValue);
         }
 
-        // ---------- EXPORT PDF (A4 landscape, repeating headers) ----------
+        // ---------- EXPORT PDF (A4 landscape, text fully visible) ----------
         function exportToPDF() {
             const pdfBtn = document.getElementById("pdfExportBtn");
             const originalText = pdfBtn.textContent;
@@ -484,6 +485,9 @@
             wrapper.style.padding = '10px 14px';
             wrapper.style.background = 'white';
             wrapper.style.fontFamily = "'Segoe UI', Arial, sans-serif";
+            wrapper.style.width = '100%';
+            wrapper.style.maxWidth = '1200px';
+            wrapper.style.margin = '0 auto';
 
             // Title
             const title = document.createElement('div');
@@ -523,7 +527,7 @@
             `;
             wrapper.appendChild(summaryTable);
 
-            // Student details with repeating header
+            // Student details with repeating header + full text
             const studentTitle = document.createElement('h3');
             studentTitle.style.fontSize = '14px';
             studentTitle.style.margin = '14px 0 4px 0';
@@ -533,9 +537,12 @@
 
             const tableWrapper = document.createElement('div');
             tableWrapper.style.overflow = 'hidden';
+            tableWrapper.style.width = '100%';
 
             const studentTable = document.createElement('table');
             studentTable.className = 'pdf-student-table';
+            studentTable.style.width = '100%';
+            studentTable.style.tableLayout = 'auto';  // columns adapt to content
 
             // Header
             const thead = document.createElement('thead');
@@ -545,6 +552,8 @@
             headers.forEach(h => {
                 const th = document.createElement('th');
                 th.textContent = h;
+                th.style.whiteSpace = 'nowrap';
+                th.style.padding = '5px 6px';
                 headerRow.appendChild(th);
             });
             thead.appendChild(headerRow);
@@ -563,6 +572,9 @@
                 cells.forEach(c => {
                     const td = document.createElement('td');
                     td.textContent = c;
+                    td.style.padding = '4px 6px';
+                    td.style.wordBreak = 'break-word';
+                    td.style.verticalAlign = 'middle';
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
@@ -571,7 +583,7 @@
             tableWrapper.appendChild(studentTable);
             wrapper.appendChild(tableWrapper);
 
-            // Extra style for PDF
+            // Extra style for PDF (ensures text visibility)
             const style = document.createElement('style');
             style.textContent = `
                 .pdf-student-table thead { display: table-header-group; }
@@ -579,13 +591,13 @@
                 .pdf-student-table tr { page-break-inside: avoid; }
                 .pdf-student-table td, .pdf-student-table th { 
                     border: 1px solid #999;
-                    padding: 3px 4px;
-                    font-size: 7.5px;
+                    padding: 4px 6px;
+                    font-size: 8px;
                 }
-                .pdf-wrapper { padding: 8px 12px; }
-                .pdf-school-grid { font-size: 10px; }
-                .pdf-summary-table { font-size: 10px; }
-                .pdf-summary-table td, .pdf-summary-table th { padding: 4px 8px; }
+                .pdf-wrapper { padding: 8px 12px; width: 100%; }
+                .pdf-school-grid { font-size: 11px; }
+                .pdf-summary-table { font-size: 11px; }
+                .pdf-summary-table td, .pdf-summary-table th { padding: 4px 10px; }
             `;
             wrapper.appendChild(style);
 
@@ -599,7 +611,8 @@
                     letterRendering: true,
                     useCORS: true,
                     logging: false,
-                    width: 1100
+                    width: 1200,
+                    height: 900
                 },
                 jsPDF: {
                     unit: 'in',
@@ -623,10 +636,7 @@
         }
 
         // auto search on load if data loaded
-        window.addEventListener('load', function() {
-            // if excelData already loaded, search will be triggered inside fetch.
-            // fallback: if excelData is empty but file not loaded, user can click search.
-        });
+        window.addEventListener('load', function() {});
     </script>
 </body>
 </html>
