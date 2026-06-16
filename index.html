@@ -1,99 +1,278 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Login</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UDISE Student Search</title>
 
-        .login-box {
-            background: #fff;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
-            width: 320px;
-        }
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-        h2 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+<style>
+body{
+    font-family: Arial, sans-serif;
+    margin:20px;
+    background:#f5f5f5;
+}
 
-        input {
-            width: 100%;
-            padding: 10px;
-            margin: 8px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
-        }
+.container{
+    max-width:1400px;
+    margin:auto;
+}
 
-        button {
-            width: 100%;
-            padding: 10px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
+h1{
+    text-align:center;
+    color:#333;
+}
 
-        button:hover {
-            background: #0056b3;
-        }
+.search-box{
+    text-align:center;
+    margin:20px 0;
+}
 
-        .error {
-            color: red;
-            text-align: center;
-            margin-top: 10px;
-        }
-    </style>
+input{
+    padding:10px;
+    width:300px;
+    font-size:16px;
+}
+
+button{
+    padding:10px 20px;
+    font-size:16px;
+    cursor:pointer;
+    background:#007bff;
+    color:#fff;
+    border:none;
+    border-radius:4px;
+}
+
+button:hover{
+    background:#0056b3;
+}
+
+.card{
+    background:#fff;
+    padding:15px;
+    border-radius:8px;
+    margin-bottom:20px;
+    box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    background:#fff;
+    font-size:14px;
+}
+
+th, td{
+    border:1px solid #ddd;
+    padding:8px;
+    text-align:left;
+}
+
+th{
+    background:#007bff;
+    color:white;
+    position:sticky;
+    top:0;
+}
+
+.summary-table{
+    width:400px;
+}
+
+.no-data{
+    color:red;
+    font-weight:bold;
+}
+
+.table-container{
+    overflow-x:auto;
+}
+</style>
 </head>
 <body>
 
-<div class="login-box">
-    <h2>Employee Login</h2>
+<div class="container">
 
-    <input type="text" id="employeeId" placeholder="User name">
-    <input type="password" id="password" placeholder="Password">
+<h1>UDISE Student Search</h1>
 
-    <button onclick="login()">Login</button>
+<div class="search-box">
+    <input type="text" id="udise" placeholder="Enter UDISE Code">
+    <button onclick="searchUDISE()">Search</button>
+</div>
 
-    <div class="error" id="errorMsg"></div>
+<div id="output"></div>
+
 </div>
 
 <script>
-function login() {
-    const employeeId = document.getElementById("employeeId").value.trim();
-    const password = document.getElementById("password").value.trim();
-    const errorMsg = document.getElementById("errorMsg");
 
-    // Wrong User Name or Password
-    if (!employeeId.startsWith("TR000")) {
-        errorMsg.textContent = "Wrong User Name or Password";
+let excelData = [];
+
+fetch('data.xlsx')
+.then(response => response.arrayBuffer())
+.then(data => {
+
+    const workbook = XLSX.read(data, {type:'array'});
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+
+    excelData = XLSX.utils.sheet_to_json(sheet, {
+        header:1,
+        defval:""
+    });
+
+})
+.catch(error => {
+    document.getElementById("output").innerHTML =
+        "<p class='no-data'>Unable to load data.xlsx</p>";
+});
+
+function searchUDISE(){
+
+    const udise = document.getElementById("udise").value.trim();
+
+    if(!udise){
+        alert("Please enter UDISE Code");
         return;
     }
 
-    // Get last 3 characters of Employee ID
-    const lastThreeDigits = employeeId.slice(-3);
+    const students = [];
 
-    // Expected password
-    const expectedPassword = "SLCPL@" + lastThreeDigits;
+    // UDISE Code in Column A (Index 0)
+    for(let i = 1; i < excelData.length; i++){
 
-    if (password === expectedPassword) {
-        window.location.href = "data.html";
-    } else {
-        errorMsg.textContent = "Invalid Employee ID or Password";
+        if(String(excelData[i][0]).trim() === udise){
+
+            students.push(excelData[i]);
+
+        }
     }
+
+    if(students.length === 0){
+
+        document.getElementById("output").innerHTML =
+            "<p class='no-data'>No records found for this UDISE Code.</p>";
+
+        return;
+    }
+
+    const first = students[0];
+
+    // Class-wise Summary
+    const classSummary = {};
+
+    students.forEach(row => {
+
+        const cls = row[5] || "Blank";
+
+        classSummary[cls] = (classSummary[cls] || 0) + 1;
+
+    });
+
+    let summaryRows = "";
+
+    Object.keys(classSummary)
+        .sort()
+        .forEach(cls => {
+
+            summaryRows += `
+            <tr>
+                <td>${cls}</td>
+                <td>${classSummary[cls]}</td>
+            </tr>`;
+
+        });
+
+    let html = `
+
+    <div class="card">
+        <h2>School Information</h2>
+
+        <p><strong>UDISE Code:</strong> ${udise}</p>
+        <p><strong>District:</strong> ${first[1]}</p>
+        <p><strong>Name of the School:</strong> ${first[2]}</p>
+        <p><strong>School Board:</strong> ${first[3]}</p>
+        <p><strong>Total Number of Enrolment:</strong> ${students.length}</p>
+    </div>
+
+    <div class="card">
+        <h2>Class Wise Enrolment Summary</h2>
+
+        <table class="summary-table">
+            <tr>
+                <th>Class</th>
+                <th>Total Enrolment</th>
+            </tr>
+
+            ${summaryRows}
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Student Details</h2>
+
+        <div class="table-container">
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>District</th>
+                    <th>Name of the School</th>
+                    <th>School Board</th>
+                    <th>Name of Candidate</th>
+                    <th>Class</th>
+                    <th>Gender</th>
+                    <th>Date of Birth</th>
+                    <th>AADHAAR number</th>
+                    <th>Father Name</th>
+                    <th>Mother Name</th>
+                    <th>Category</th>
+                    <th>Sector</th>
+                    <th>Job Role</th>
+                    <th>Project Name (Select From Drop Down Only)</th>
+                    <th>Data Verfied By (VT Name)</th>
+                </tr>
+            </thead>
+
+            <tbody>
+    `;
+
+    students.forEach(row => {
+
+        html += `
+        <tr>
+            <td>${row[1] || ""}</td>
+            <td>${row[2] || ""}</td>
+            <td>${row[3] || ""}</td>
+            <td>${row[4] || ""}</td>
+            <td>${row[5] || ""}</td>
+            <td>${row[6] || ""}</td>
+            <td>${row[7] || ""}</td>
+            <td>${row[8] || ""}</td>
+            <td>${row[9] || ""}</td>
+            <td>${row[10] || ""}</td>
+            <td>${row[11] || ""}</td>
+            <td>${row[12] || ""}</td>
+            <td>${row[13] || ""}</td>
+            <td>${row[14] || ""}</td>
+            <td>${row[15] || ""}</td>
+        </tr>`;
+    });
+
+    html += `
+            </tbody>
+        </table>
+
+        </div>
+    </div>
+    `;
+
+    document.getElementById("output").innerHTML = html;
 }
+
 </script>
 
 </body>
