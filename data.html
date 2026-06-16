@@ -1,497 +1,690 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UDISE Student Search</title>
-  <!-- XLSX library for Excel parsing -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <!-- html2pdf library for PDF export -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-      background: #f0f4f8;
-      padding: 24px;
-      margin: 0;
-    }
-    .container {
-      max-width: 1500px;
-      margin: 0 auto;
-      background: white;
-      padding: 24px 28px;
-      border-radius: 20px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
-    }
-    h1 {
-      text-align: center;
-      font-weight: 500;
-      color: #1e293b;
-      letter-spacing: -0.3px;
-      margin-bottom: 6px;
-      font-size: 2rem;
-    }
-    .subhead {
-      text-align: center;
-      color: #64748b;
-      margin-bottom: 24px;
-      font-size: 0.95rem;
-    }
-    .search-box {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin: 20px 0 28px 0;
-    }
-    .search-box input {
-      padding: 12px 18px;
-      width: 340px;
-      font-size: 1rem;
-      border: 1.5px solid #d1d9e6;
-      border-radius: 60px;
-      background: #fafcff;
-      transition: 0.2s;
-      outline: none;
-    }
-    .search-box input:focus {
-      border-color: #2563eb;
-      box-shadow: 0 0 0 4px rgba(37,99,235,0.15);
-      background: white;
-    }
-    .search-box button {
-      padding: 12px 32px;
-      font-size: 1rem;
-      font-weight: 500;
-      background: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 60px;
-      cursor: pointer;
-      transition: 0.2s;
-      box-shadow: 0 4px 8px rgba(37,99,235,0.2);
-    }
-    .search-box button:hover {
-      background: #1d4ed8;
-      transform: scale(1.02);
-    }
-    .card {
-      background: #ffffff;
-      border-radius: 18px;
-      padding: 18px 22px;
-      margin-bottom: 28px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-      border: 1px solid #e9edf2;
-    }
-    .card h2 {
-      font-weight: 500;
-      font-size: 1.3rem;
-      color: #0f172a;
-      border-bottom: 2px solid #eef2f6;
-      padding-bottom: 12px;
-      margin-bottom: 16px;
-    }
-    .school-info-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 8px 20px;
-      padding: 4px 0;
-    }
-    .school-info-grid p {
-      margin: 6px 0;
-      color: #1e293b;
-    }
-    .school-info-grid strong {
-      color: #0f172a;
-      font-weight: 600;
-    }
-    .summary-table {
-      width: 100%;
-      max-width: 500px;
-      border-collapse: collapse;
-      font-size: 0.95rem;
-      margin: 8px 0;
-    }
-    .summary-table th {
-      background: #f1f5f9;
-      color: #1e293b;
-      font-weight: 600;
-      padding: 10px 12px;
-      border: 1px solid #dce1e9;
-      text-align: left;
-    }
-    .summary-table td {
-      padding: 8px 12px;
-      border: 1px solid #dce1e9;
-    }
-    .table-container {
-      overflow-x: auto;
-      margin-top: 6px;
-      border-radius: 12px;
-      border: 1px solid #e9edf2;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-      background: white;
-      min-width: 1100px;
-    }
-    th {
-      background: #f8fafc;
-      color: #0f172a;
-      font-weight: 600;
-      padding: 12px 10px;
-      border: 1px solid #dce1e9;
-      text-align: left;
-      white-space: nowrap;
-      position: sticky;
-      top: 0;
-      z-index: 2;
-    }
-    td {
-      padding: 10px 10px;
-      border: 1px solid #e2e8f0;
-      vertical-align: middle;
-      background: white;
-    }
-    tr:nth-child(even) td {
-      background: #fafcff;
-    }
-    .no-data {
-      color: #b91c1c;
-      font-weight: 500;
-      background: #fee2e2;
-      padding: 14px 20px;
-      border-radius: 40px;
-      text-align: center;
-      margin: 16px 0;
-    }
-    .btn-pdf {
-      background: #16a34a;
-      margin-left: 12px;
-      box-shadow: 0 4px 8px rgba(22,163,74,0.2);
-    }
-    .btn-pdf:hover {
-      background: #15803d;
-    }
-    .action-bar {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 16px;
-    }
-    .export-btn {
-      padding: 10px 28px;
-      font-size: 0.95rem;
-      font-weight: 500;
-      border: none;
-      border-radius: 60px;
-      cursor: pointer;
-      background: #2563eb;
-      color: white;
-      transition: 0.2s;
-      box-shadow: 0 4px 8px rgba(37,99,235,0.15);
-    }
-    .export-btn:hover {
-      transform: scale(1.02);
-      opacity: 0.9;
-    }
-    .export-btn.pdf {
-      background: #16a34a;
-    }
-    .flex-row {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .badge-count {
-      background: #e2e8f0;
-      padding: 4px 14px;
-      border-radius: 40px;
-      font-size: 0.9rem;
-      color: #1e293b;
-    }
-    /* small screens */
-    @media (max-width: 600px) {
-      .container { padding: 16px; }
-      .search-box input { width: 100%; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Database</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js">
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: #f0f4f8;
+            padding: 24px;
+            margin: 0;
+        }
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+            background: white;
+            padding: 24px 28px;
+            border-radius: 20px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+        }
+        h1 {
+            text-align: center;
+            font-weight: 500;
+            color: #1e293b;
+            letter-spacing: -0.3px;
+            margin-bottom: 6px;
+            font-size: 2rem;
+        }
+        .subhead {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+        }
+        .search-box {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 20px 0 28px 0;
+        }
+        .search-box input {
+            padding: 12px 18px;
+            width: 340px;
+            font-size: 1rem;
+            border: 1.5px solid #d1d9e6;
+            border-radius: 60px;
+            background: #fafcff;
+            transition: 0.2s;
+            outline: none;
+        }
+        .search-box input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+            background: white;
+        }
+        .search-box button {
+            padding: 12px 32px;
+            font-size: 1rem;
+            font-weight: 500;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.2);
+        }
+        .search-box button:hover {
+            background: #1d4ed8;
+            transform: scale(1.02);
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 18px 22px;
+            margin-bottom: 28px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+            border: 1px solid #e9edf2;
+        }
+        .card h2 {
+            font-weight: 500;
+            font-size: 1.3rem;
+            color: #0f172a;
+            border-bottom: 2px solid #eef2f6;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        .school-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 8px 20px;
+            padding: 4px 0;
+        }
+        .school-info-grid p {
+            margin: 6px 0;
+            color: #1e293b;
+        }
+        .school-info-grid strong {
+            color: #0f172a;
+            font-weight: 600;
+        }
+        .summary-table {
+            width: 100%;
+            max-width: 500px;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+            margin: 8px 0;
+        }
+        .summary-table th {
+            background: #f1f5f9;
+            color: #1e293b;
+            font-weight: 600;
+            padding: 10px 12px;
+            border: 1px solid #dce1e9;
+            text-align: left;
+        }
+        .summary-table td {
+            padding: 8px 12px;
+            border: 1px solid #dce1e9;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin-top: 6px;
+            border-radius: 12px;
+            border: 1px solid #e9edf2;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            background: white;
+            min-width: 1100px;
+        }
+        th {
+            background: #f8fafc;
+            color: #0f172a;
+            font-weight: 600;
+            padding: 10px 8px;
+            border: 1px solid #dce1e9;
+            text-align: left;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        td {
+            padding: 8px 8px;
+            border: 1px solid #e2e8f0;
+            vertical-align: middle;
+            background: white;
+        }
+        tr:nth-child(even) td {
+            background: #fafcff;
+        }
+        .no-data {
+            color: #b91c1c;
+            font-weight: 500;
+            background: #fee2e2;
+            padding: 14px 20px;
+            border-radius: 40px;
+            text-align: center;
+            margin: 16px 0;
+        }
+        .btn-pdf {
+            background: #16a34a;
+            margin-left: 12px;
+            box-shadow: 0 4px 8px rgba(22, 163, 74, 0.2);
+        }
+        .btn-pdf:hover {
+            background: #15803d;
+        }
+        .action-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .export-btn {
+            padding: 10px 28px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 60px;
+            cursor: pointer;
+            background: #2563eb;
+            color: white;
+            transition: 0.2s;
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.15);
+        }
+        .export-btn:hover {
+            transform: scale(1.02);
+            opacity: 0.9;
+        }
+        .export-btn.pdf {
+            background: #16a34a;
+        }
+        .flex-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .badge-count {
+            background: #e2e8f0;
+            padding: 4px 14px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            color: #1e293b;
+        }
+
+        /* PDF export specific styles - A4 optimized */
+        .pdf-wrapper {
+            padding: 12px 16px;
+            background: white;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        .pdf-wrapper .pdf-title {
+            text-align: center;
+            font-size: 20px;
+            font-weight: 600;
+            color: #0f172a;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 10px;
+            margin-bottom: 16px;
+        }
+        .pdf-wrapper .pdf-school-card {
+            border: 1px solid #dce1e9;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 14px;
+            background: #fafcff;
+        }
+        .pdf-wrapper .pdf-school-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #0f172a;
+        }
+        .pdf-wrapper .pdf-school-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 20px;
+            font-size: 12px;
+            color: #1e293b;
+        }
+        .pdf-wrapper .pdf-school-grid strong {
+            color: #0f172a;
+        }
+        .pdf-wrapper .pdf-summary-table {
+            width: 100%;
+            max-width: 400px;
+            border-collapse: collapse;
+            font-size: 11px;
+            margin: 6px 0 14px 0;
+        }
+        .pdf-wrapper .pdf-summary-table th,
+        .pdf-wrapper .pdf-summary-table td {
+            border: 1px solid #bcc3cd;
+            padding: 5px 10px;
+            text-align: left;
+        }
+        .pdf-wrapper .pdf-summary-table th {
+            background: #e9edf2;
+            font-weight: 600;
+        }
+        .pdf-wrapper .pdf-student-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8.5px;
+            margin-top: 6px;
+        }
+        .pdf-wrapper .pdf-student-table th {
+            background: #e9edf2;
+            color: #0f172a;
+            font-weight: 600;
+            padding: 5px 4px;
+            border: 1px solid #bcc3cd;
+            text-align: left;
+            white-space: nowrap;
+        }
+        .pdf-wrapper .pdf-student-table td {
+            padding: 4px 4px;
+            border: 1px solid #bcc3cd;
+            vertical-align: middle;
+        }
+        .pdf-wrapper .pdf-student-table tr:nth-child(even) td {
+            background: #f8fafc;
+        }
+        /* for table header repeat in PDF we use thead + CSS */
+        .pdf-wrapper .pdf-student-table thead {
+            display: table-header-group;
+        }
+        .pdf-wrapper .pdf-student-table tbody {
+            display: table-row-group;
+        }
+
+        @media print {
+            .pdf-wrapper .pdf-student-table thead {
+                display: table-header-group;
+            }
+            .pdf-wrapper .pdf-student-table tbody {
+                display: table-row-group;
+            }
+            .pdf-wrapper .pdf-student-table {
+                font-size: 7.5px;
+            }
+            .pdf-wrapper .pdf-school-grid {
+                font-size: 10px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 16px;
+            }
+            .search-box input {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-<div class="container" id="mainContainer">
-  <h1>🏫 UDISE Student Search</h1>
-  <div class="subhead">Enter UDISE code to fetch student records &amp; export to PDF</div>
+    <div class="container" id="mainContainer">
+        <h1>🏫 Student Database</h1>
+        <div class="subhead">Enter UDISE code to fetch student records &amp; export to PDF</div>
 
-  <div class="search-box">
-    <input type="text" id="udise" placeholder="e.g. 123456789" value="123456789">
-    <button onclick="searchUDISE()">🔍 Search</button>
-    <button id="pdfExportBtn" class="export-btn pdf" style="display:none;" onclick="exportToPDF()">📄 Export PDF</button>
-  </div>
-
-  <div id="output"></div>
-</div>
-
-<script>
-  let excelData = [];
-  let currentStudents = [];        // store last search result for PDF export
-  let currentSchoolInfo = null;    // store school info (first row)
-
-  // Load Excel file (data.xlsx)
-  fetch('data.xlsx')
-    .then(response => {
-      if (!response.ok) throw new Error('Network response was not ok');
-      return response.arrayBuffer();
-    })
-    .then(data => {
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      excelData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-      // remove empty rows if any
-      excelData = excelData.filter(row => row.some(cell => cell && cell.toString().trim() !== ''));
-    })
-    .catch(error => {
-      document.getElementById("output").innerHTML =
-        `<p class="no-data">⚠️ Unable to load data.xlsx. Please make sure the file exists in the same directory.</p>`;
-      console.warn('Excel load error:', error);
-    });
-
-  // ---------- Search ----------
-  function searchUDISE() {
-    const udiseInput = document.getElementById("udise").value.trim();
-    if (!udiseInput) {
-      alert("Please enter a UDISE Code");
-      return;
-    }
-
-    const students = [];
-    // Column A (index 0) = UDISE Code
-    for (let i = 1; i < excelData.length; i++) {
-      const row = excelData[i];
-      if (row && row.length > 0 && String(row[0]).trim() === udiseInput) {
-        students.push(row);
-      }
-    }
-
-    if (students.length === 0) {
-      document.getElementById("output").innerHTML =
-        `<p class="no-data">❌ No records found for UDISE Code: ${udiseInput}</p>`;
-      document.getElementById("pdfExportBtn").style.display = "none";
-      currentStudents = [];
-      currentSchoolInfo = null;
-      return;
-    }
-
-    // store for PDF
-    currentStudents = students;
-    const firstRow = students[0];
-    currentSchoolInfo = {
-      udise: udiseInput,
-      district: firstRow[1] || '',
-      schoolName: firstRow[2] || '',
-      board: firstRow[3] || '',
-      total: students.length
-    };
-
-    // ---- Class summary ----
-    const classSummary = {};
-    students.forEach(row => {
-      const cls = (row[5] || "Blank").toString().trim() || "Not specified";
-      classSummary[cls] = (classSummary[cls] || 0) + 1;
-    });
-
-    let summaryRows = '';
-    Object.keys(classSummary).sort().forEach(cls => {
-      summaryRows += `<tr><td>${cls}</td><td>${classSummary[cls]}</td></tr>`;
-    });
-
-    // ---- Build HTML ----
-    let html = `
-      <div class="card">
-        <div class="flex-row">
-          <h2>🏛️ School Information</h2>
-          <span class="badge-count">Total students: ${students.length}</span>
+        <div class="search-box">
+            <input type="text" id="udise" placeholder="e.g. 123456789101" value="123456789101">
+            <button onclick="searchUDISE()">🔍 Search</button>
+            <button id="pdfExportBtn" class="export-btn pdf" style="display:none;" onclick="exportToPDF()">📄 Export PDF</button>
         </div>
-        <div class="school-info-grid">
-          <p><strong>UDISE Code:</strong> ${udiseInput}</p>
-          <p><strong>District:</strong> ${firstRow[1] || ''}</p>
-          <p><strong>School Name:</strong> ${firstRow[2] || ''}</p>
-          <p><strong>School Board:</strong> ${firstRow[3] || ''}</p>
-        </div>
-      </div>
 
-      <div class="card">
-        <h2>📊 Class Wise Enrolment</h2>
-        <table class="summary-table">
-          <tr><th>Class</th><th>Total Enrolment</th></tr>
-          ${summaryRows}
-        </table>
-      </div>
+        <div id="output"></div>
+    </div>
 
-      <div class="card" id="studentDetailCard">
-        <h2>👩‍🎓 Student Details</h2>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>District</th><th>School</th><th>Board</th><th>Candidate</th>
-                <th>Class</th><th>Gender</th><th>Date of Birth</th><th>AADHAAR</th>
-                <th>Father</th><th>Mother</th><th>Category</th><th>Sector</th>
-                <th>Job Role</th><th>Project</th><th>Verified By</th>
-              </tr>
-            </thead>
-            <tbody>
-    `;
+    <script>
+        let excelData = [];
+        let currentStudents = [];
+        let currentSchoolInfo = null;
+        let currentSummaryRows = '';
 
-    students.forEach(row => {
-      // Fix DOB: column index 7 -> ensure DD-MMM-YYYY format
-      let dob = row[7] || '';
-      if (dob) {
-        dob = formatDateToDDMMMYYYY(dob);
-      }
-      html += `
-        <tr>
-          <td>${row[1] || ''}</td>
-          <td>${row[2] || ''}</td>
-          <td>${row[3] || ''}</td>
-          <td>${row[4] || ''}</td>
-          <td>${row[5] || ''}</td>
-          <td>${row[6] || ''}</td>
-          <td>${dob}</td>
-          <td>${row[8] || ''}</td>
-          <td>${row[9] || ''}</td>
-          <td>${row[10] || ''}</td>
-          <td>${row[11] || ''}</td>
-          <td>${row[12] || ''}</td>
-          <td>${row[13] || ''}</td>
-          <td>${row[14] || ''}</td>
-          <td>${row[15] || ''}</td>
-        </tr>
-      `;
-    });
+        // Load Excel file
+        fetch('data.xlsx')
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.arrayBuffer();
+            })
+            .then(data => {
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                excelData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+                excelData = excelData.filter(row => row.some(cell => cell && cell.toString().trim() !== ''));
+            })
+            .catch(error => {
+                document.getElementById("output").innerHTML =
+                    `<p class="no-data">⚠️ Unable to load data.xlsx. Please make sure the file exists in the same directory.</p>`;
+                console.warn('Excel load error:', error);
+            });
 
-    html += `</tbody></table></div></div>`;
+        // ---------- Search ----------
+        function searchUDISE() {
+            const udiseInput = document.getElementById("udise").value.trim();
+            if (!udiseInput) {
+                alert("Please enter a UDISE Code");
+                return;
+            }
 
-    document.getElementById("output").innerHTML = html;
-    document.getElementById("pdfExportBtn").style.display = "inline-block";
-  }
+            const students = [];
+            for (let i = 1; i < excelData.length; i++) {
+                const row = excelData[i];
+                if (row && row.length > 0 && String(row[0]).trim() === udiseInput) {
+                    students.push(row);
+                }
+            }
 
-  // ---------- Date formatter: DD-MMM-YYYY (e.g., 15-Aug-2026) ----------
-  function formatDateToDDMMMYYYY(dateValue) {
-    if (!dateValue) return '';
-    let dateObj = null;
+            if (students.length === 0) {
+                document.getElementById("output").innerHTML =
+                    `<p class="no-data">❌ No records found for UDISE Code: ${udiseInput}</p>`;
+                document.getElementById("pdfExportBtn").style.display = "none";
+                currentStudents = [];
+                currentSchoolInfo = null;
+                return;
+            }
 
-    // If it's a number (Excel date serial)
-    if (typeof dateValue === 'number' && !isNaN(dateValue)) {
-      // Excel serial: days since 1900-01-01
-      const epoch = new Date(1899, 11, 30);
-      dateObj = new Date(epoch.getTime() + dateValue * 86400000);
-    } 
-    // If it's a string, try to parse
-    else if (typeof dateValue === 'string') {
-      const trimmed = dateValue.trim();
-      // if it looks like DD-MMM-YYYY already, return as is (but ensure format)
-      if (/^\d{1,2}-[A-Za-z]{3}-\d{4}$/.test(trimmed)) {
-        // ensure two-digit day
-        const parts = trimmed.split('-');
-        const day = parts[0].padStart(2, '0');
-        return `${day}-${parts[1]}-${parts[2]}`;
-      }
-      // try to parse with native Date
-      const parsed = new Date(trimmed);
-      if (!isNaN(parsed)) dateObj = parsed;
-    }
+            currentStudents = students;
+            const firstRow = students[0];
+            currentSchoolInfo = {
+                udise: udiseInput,
+                district: firstRow[1] || '',
+                schoolName: firstRow[2] || '',
+                board: firstRow[3] || '',
+                total: students.length
+            };
 
-    // if we have a valid date object, format
-    if (dateObj && !isNaN(dateObj)) {
-      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const day = String(dateObj.getDate()).padStart(2, '0');
-      const month = monthNames[dateObj.getMonth()];
-      const year = dateObj.getFullYear();
-      return `${day}-${month}-${year}`;
-    }
+            // Class summary
+            const classSummary = {};
+            students.forEach(row => {
+                const cls = (row[5] || "Blank").toString().trim() || "Not specified";
+                classSummary[cls] = (classSummary[cls] || 0) + 1;
+            });
 
-    // fallback: return original string
-    return String(dateValue);
-  }
+            let summaryRows = '';
+            Object.keys(classSummary).sort().forEach(cls => {
+                summaryRows += `<tr><td>${cls}</td><td>${classSummary[cls]}</td></tr>`;
+            });
+            currentSummaryRows = summaryRows;
 
-  // ---------- Export to PDF (using html2pdf) ----------
-  function exportToPDF() {
-    const pdfBtn = document.getElementById("pdfExportBtn");
-    const originalText = pdfBtn.textContent;
-    pdfBtn.textContent = "⏳ Generating...";
-    pdfBtn.disabled = true;
+            // Build HTML
+            let html = `
+                    <div class="card">
+                        <div class="flex-row">
+                            <h2>🏛️ School Information</h2>
+                            <span class="badge-count">Total students: ${students.length}</span>
+                        </div>
+                        <div class="school-info-grid">
+                            <p><strong>UDISE Code:</strong> ${udiseInput}</p>
+                            <p><strong>District:</strong> ${firstRow[1] || ''}</p>
+                            <p><strong>School Name:</strong> ${firstRow[2] || ''}</p>
+                            <p><strong>School Board:</strong> ${firstRow[3] || ''}</p>
+                        </div>
+                    </div>
 
-    // gather content to export: container with cards + table
-    const outputDiv = document.getElementById("output");
-    if (!outputDiv || !outputDiv.innerHTML.trim()) {
-      alert("No data to export. Please search first.");
-      pdfBtn.textContent = originalText;
-      pdfBtn.disabled = false;
-      return;
-    }
+                    <div class="card">
+                        <h2>📊 Class Wise Enrolment</h2>
+                        <table class="summary-table">
+                            <tr><th>Class</th><th>Total Enrolment</th></tr>
+                            ${summaryRows}
+                        </table>
+                    </div>
 
-    // Build a clean wrapper (clone to avoid altering displayed content)
-    const wrapper = document.createElement('div');
-    wrapper.style.padding = '16px';
-    wrapper.style.background = 'white';
-    wrapper.style.fontFamily = "'Segoe UI', Arial, sans-serif";
-    wrapper.style.maxWidth = '1400px';
-    wrapper.style.margin = '0 auto';
+                    <div class="card" id="studentDetailCard">
+                        <h2>👩‍🎓 Student Details</h2>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>District</th><th>School</th><th>Board</th><th>Candidate</th>
+                                        <th>Class</th><th>Gender</th><th>Date of Birth</th><th>AADHAAR</th>
+                                        <th>Father</th><th>Mother</th><th>Category</th><th>Sector</th>
+                                        <th>Job Role</th><th>Project</th><th>Verified By</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
 
-    // Clone school and summary cards + student table
-    const cards = outputDiv.querySelectorAll('.card');
-    cards.forEach(card => {
-      wrapper.appendChild(card.cloneNode(true));
-    });
+            students.forEach(row => {
+                let dob = row[7] || '';
+                if (dob) {
+                    dob = formatDateToDDMMMYYYY(dob);
+                }
+                html += `
+                            <tr>
+                                <td>${row[1] || ''}</td>
+                                <td>${row[2] || ''}</td>
+                                <td>${row[3] || ''}</td>
+                                <td>${row[4] || ''}</td>
+                                <td>${row[5] || ''}</td>
+                                <td>${row[6] || ''}</td>
+                                <td>${dob}</td>
+                                <td>${row[8] || ''}</td>
+                                <td>${row[9] || ''}</td>
+                                <td>${row[10] || ''}</td>
+                                <td>${row[11] || ''}</td>
+                                <td>${row[12] || ''}</td>
+                                <td>${row[13] || ''}</td>
+                                <td>${row[14] || ''}</td>
+                                <td>${row[15] || ''}</td>
+                            </tr>
+                        `;
+            });
 
-    // add title
-    const title = document.createElement('h2');
-    title.style.textAlign = 'center';
-    title.style.color = '#0f172a';
-    title.style.borderBottom = '2px solid #2563eb';
-    title.style.paddingBottom = '12px';
-    title.style.marginBottom = '20px';
-    title.textContent = 'UDISE Student Report';
-    wrapper.prepend(title);
+            html += `</tbody></table></div></div>`;
 
-    // options for pdf
-    const opt = {
-      margin:        [0.6, 0.6, 0.6, 0.6],
-      filename:     `UDISE_${currentSchoolInfo?.udise || 'students'}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, letterRendering: true, useCORS: true, logging: false },
-      jsPDF:        { unit: 'in', format: 'a2', orientation: 'landscape' }
-    };
+            document.getElementById("output").innerHTML = html;
+            document.getElementById("pdfExportBtn").style.display = "inline-block";
+        }
 
-    html2pdf().set(opt).from(wrapper).save().then(() => {
-      pdfBtn.textContent = originalText;
-      pdfBtn.disabled = false;
-    }).catch(err => {
-      console.warn('PDF export error:', err);
-      alert('Could not generate PDF. Please try again.');
-      pdfBtn.textContent = originalText;
-      pdfBtn.disabled = false;
-    });
-  }
+        // ---------- Date formatter ----------
+        function formatDateToDDMMMYYYY(dateValue) {
+            if (!dateValue) return '';
+            let dateObj = null;
 
-  // ---------- Auto-trigger search on load (demo) ----------
-  window.addEventListener('load', function() {
-    // If you want to pre-fill and search automatically, uncomment:
-    // document.getElementById('udise').value = '123456789';
-    // searchUDISE();
-  });
-</script>
+            if (typeof dateValue === 'number' && !isNaN(dateValue)) {
+                const epoch = new Date(1899, 11, 30);
+                dateObj = new Date(epoch.getTime() + dateValue * 86400000);
+            } else if (typeof dateValue === 'string') {
+                const trimmed = dateValue.trim();
+                if (/^\d{1,2}-[A-Za-z]{3}-\d{4}$/.test(trimmed)) {
+                    const parts = trimmed.split('-');
+                    const day = parts[0].padStart(2, '0');
+                    return `${day}-${parts[1]}-${parts[2]}`;
+                }
+                const parsed = new Date(trimmed);
+                if (!isNaN(parsed)) dateObj = parsed;
+            }
+
+            if (dateObj && !isNaN(dateObj)) {
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const day = String(dateObj.getDate()).padStart(2, '0');
+                const month = monthNames[dateObj.getMonth()];
+                const year = dateObj.getFullYear();
+                return `${day}-${month}-${year}`;
+            }
+            return String(dateValue);
+        }
+
+        // ---------- Export to PDF (A4 optimized with repeating headers) ----------
+        function exportToPDF() {
+            const pdfBtn = document.getElementById("pdfExportBtn");
+            const originalText = pdfBtn.textContent;
+            pdfBtn.textContent = "⏳ Generating...";
+            pdfBtn.disabled = true;
+
+            if (!currentStudents || currentStudents.length === 0) {
+                alert("No data to export. Please search first.");
+                pdfBtn.textContent = originalText;
+                pdfBtn.disabled = false;
+                return;
+            }
+
+            // Build PDF wrapper with clean structure
+            const wrapper = document.createElement('div');
+            wrapper.className = 'pdf-wrapper';
+            wrapper.style.padding = '10px 14px';
+            wrapper.style.background = 'white';
+            wrapper.style.fontFamily = "'Segoe UI', Arial, sans-serif";
+
+            // Title
+            const title = document.createElement('div');
+            title.className = 'pdf-title';
+            title.textContent = 'UDISE Student Report';
+            wrapper.appendChild(title);
+
+            // School Info
+            const schoolCard = document.createElement('div');
+            schoolCard.className = 'pdf-school-card';
+            const info = currentSchoolInfo || {};
+            schoolCard.innerHTML = `
+                        <h3>🏛️ School Information</h3>
+                        <div class="pdf-school-grid">
+                            <p><strong>UDISE Code:</strong> ${info.udise || ''}</p>
+                            <p><strong>District:</strong> ${info.district || ''}</p>
+                            <p><strong>School Name:</strong> ${info.schoolName || ''}</p>
+                            <p><strong>School Board:</strong> ${info.board || ''}</p>
+                            <p><strong>Total Students:</strong> ${info.total || currentStudents.length}</p>
+                        </div>
+                    `;
+            wrapper.appendChild(schoolCard);
+
+            // Summary Table
+            const summaryTitle = document.createElement('h3');
+            summaryTitle.style.fontSize = '14px';
+            summaryTitle.style.margin = '6px 0 4px 0';
+            summaryTitle.style.fontWeight = '600';
+            summaryTitle.textContent = '📊 Class Wise Enrolment';
+            wrapper.appendChild(summaryTitle);
+
+            const summaryTable = document.createElement('table');
+            summaryTable.className = 'pdf-summary-table';
+            summaryTable.innerHTML = `
+                        <thead><tr><th>Class</th><th>Total Enrolment</th></tr></thead>
+                        <tbody>${currentSummaryRows}</tbody>
+                    `;
+            wrapper.appendChild(summaryTable);
+
+            // Student Details Table with repeating headers
+            const studentTitle = document.createElement('h3');
+            studentTitle.style.fontSize = '14px';
+            studentTitle.style.margin = '14px 0 4px 0';
+            studentTitle.style.fontWeight = '600';
+            studentTitle.textContent = '👩‍🎓 Student Details';
+            wrapper.appendChild(studentTitle);
+
+            const tableWrapper = document.createElement('div');
+            tableWrapper.style.overflow = 'hidden';
+
+            const studentTable = document.createElement('table');
+            studentTable.className = 'pdf-student-table';
+
+            // Build header with proper thead
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            const headers = ['District', 'School', 'Board', 'Candidate', 'Class', 'Gender', 'Date of Birth',
+                'AADHAAR', 'Father', 'Mother', 'Category', 'Sector', 'Job Role', 'Project', 'Verified By'
+            ];
+            headers.forEach(h => {
+                const th = document.createElement('th');
+                th.textContent = h;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            studentTable.appendChild(thead);
+
+            // Build body
+            const tbody = document.createElement('tbody');
+            currentStudents.forEach(row => {
+                const tr = document.createElement('tr');
+                const cells = [
+                    row[1] || '', row[2] || '', row[3] || '', row[4] || '',
+                    row[5] || '', row[6] || '', formatDateToDDMMMYYYY(row[7] || ''),
+                    row[8] || '', row[9] || '', row[10] || '',
+                    row[11] || '', row[12] || '', row[13] || '',
+                    row[14] || '', row[15] || ''
+                ];
+                cells.forEach(c => {
+                    const td = document.createElement('td');
+                    td.textContent = c;
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            studentTable.appendChild(tbody);
+            tableWrapper.appendChild(studentTable);
+            wrapper.appendChild(tableWrapper);
+
+            // PDF options optimized for A4
+            const opt = {
+                margin: [0.4, 0.4, 0.4, 0.4],
+                filename: `UDISE_${currentSchoolInfo?.udise || 'students'}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 2,
+                    letterRendering: true,
+                    useCORS: true,
+                    logging: false,
+                    width: 1100
+                },
+                jsPDF: {
+                    unit: 'in',
+                    format: 'a4',
+                    orientation: 'landscape'
+                },
+                pagebreak: { mode: ['css', 'legacy'] }
+            };
+
+            // Add CSS to ensure table headers repeat
+            const style = document.createElement('style');
+            style.textContent = `
+                        .pdf-student-table thead { display: table-header-group; }
+                        .pdf-student-table tbody { display: table-row-group; }
+                        .pdf-student-table tr { page-break-inside: avoid; }
+                        .pdf-student-table td, .pdf-student-table th { 
+                            border: 1px solid #999;
+                            padding: 3px 4px;
+                            font-size: 7.5px;
+                        }
+                        .pdf-wrapper { padding: 8px 12px; }
+                        .pdf-school-grid { font-size: 10px; }
+                        .pdf-summary-table { font-size: 10px; }
+                        .pdf-summary-table td, .pdf-summary-table th { padding: 4px 8px; }
+                    `;
+            wrapper.appendChild(style);
+
+            html2pdf().set(opt).from(wrapper).save().then(() => {
+                pdfBtn.textContent = originalText;
+                pdfBtn.disabled = false;
+            }).catch(err => {
+                console.warn('PDF export error:', err);
+                alert('Could not generate PDF. Please try again.');
+                pdfBtn.textContent = originalText;
+                pdfBtn.disabled = false;
+            });
+        }
+
+        // Auto-trigger on load
+        window.addEventListener('load', function() {
+            // Uncomment to auto-search:
+            // document.getElementById('udise').value = '123456789';
+            // searchUDISE();
+        });
+    </script>
 </body>
 </html>
